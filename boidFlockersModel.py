@@ -26,9 +26,9 @@ class BoidFlockers(Model):
 
     def __init__(
         self,
-        population_size=100,
-        width=100,
-        height=100,
+        population_size=10,
+        width=50,
+        height=50,
         speed=1,
         vision=10,
         separation=2,
@@ -78,7 +78,9 @@ class BoidFlockers(Model):
             speed=speed,
             vision=vision,
             separation=separation,
+            Maxgroup = 3
         )
+        
 
         # For tracking statistics
         self.average_heading = None
@@ -102,3 +104,6 @@ class BoidFlockers(Model):
         _mesa_logger.warning(f"Running step {self.steps}")
         self.agents.shuffle_do("step")
         self.update_average_heading()
+    
+    # def create_roi(self):
+    #     self.

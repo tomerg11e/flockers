@@ -2,7 +2,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath("../../../.."))
-import matplotlib.pyplot as plt
+import time
 from boidFlockersModel import BoidFlockers
 from mesa.visualization import Slider, SolaraViz, make_space_component
 from mesa.mesa_logging import get_rootlogger
@@ -16,11 +16,13 @@ logger.addHandler(file_handler)
 width = 50
 height = 50
 
-def boid_draw(agent, palette="tab10"):
+def boid_draw(agent):
     neighbors = len(agent.neighbors)
-    cmap = plt.get_cmap(palette)
-    color = cmap(agent.group % cmap.N)
-    return {"color": color, "size": 20}
+
+    if neighbors <= 1:
+        return {"color": "red", "size": 20}
+    elif neighbors >= 2:
+        return {"color": "green", "size": 20}
 
 
 model_params = {
@@ -61,12 +63,9 @@ model_params = {
     ),
 }
 
+
 model = BoidFlockers(width=width, height=height)
 
-page = SolaraViz(
-    model,
-    components=[make_space_component(agent_portrayal=boid_draw, backend="matplotlib")],
-    model_params=model_params,
-    name="Boid Flocking Model",
-)
-page  # noqa
+while True:
+    model.step()
+    time.sleep(0.1)

@@ -3,9 +3,10 @@
 This implementation uses numpy arrays to represent vectors for efficient computation
 of flocking behavior.
 """
-
+from itertools import compress
 import numpy as np
 import uuid
+import random
 from mesa.experimental.continuous_space import ContinuousSpaceAgent
 from mesa.mesa_logging import create_module_logger, method_logger
 
@@ -36,6 +37,8 @@ class MyBoid(ContinuousSpaceAgent):
         cohere=0.03,
         separate=0.015,
         match=0.05,
+        starting_factor=0.01,
+        Maxgroup = 1
     ):
         """Create a new Boid flocker agent.
 
@@ -50,6 +53,7 @@ class MyBoid(ContinuousSpaceAgent):
             match: Relative importance of matching neighbors' directions (default: 0.05)
         """
         super().__init__(space, model)
+        self.startign_position = position
         self.position = position
         self.speed = speed
         self.direction = direction
@@ -58,22 +62,32 @@ class MyBoid(ContinuousSpaceAgent):
         self.cohere_factor = cohere
         self.separate_factor = separate
         self.match_factor = match
+        self.starting_factor = starting_factor
+        self.group = random.randint(1, Maxgroup)
         self.neighbors = []
         self.uuid = uuid.uuid4()
     
     @method_logger(__name__)
     def step(self):
         """Get the Boid's neighbors, compute the new vector, and move accordingly."""
-        neighbors, distances = self.get_neighbors_in_radius(radius=self.vision)
-        self.neighbors = [n for n in neighbors if n is not self]
+        # calc base vector
+        base_vector = (self.position - self.startign_position) * self.starting_factor
+        base_vector = 0
 
-        # If no neighbors, maintain current direction
-        if not neighbors:
+
+        # get only neigbors that are in the same group and not self
+        neighbors, distances = self.space.get_agents_in_radius(self.position, radius=self.vision)
+        NeighborInGroupFlag =  np.asarray([agent.group == self.group and agent is not self for agent in neighbors])
+        neighbors = list(compress(neighbors, NeighborInGroupFlag))
+        self.neighbors = [n for n in neighbors if n is not self]
+        
+        if len(neighbors) == 0: # If no neighbors, maintain current direction and return a bit to base
+            self.direction += base_vector
             self.position += self.direction * self.speed
             return
-
+        
+        distances = distances[NeighborInGroupFlag]
         delta = self.space.calculate_difference_vector(self.position, agents=neighbors)
-
         cohere_vector = delta.sum(axis=0) * self.cohere_factor
         separation_vector = (
             -1 * delta[distances < self.separation].sum(axis=0) * self.separate_factor
@@ -82,10 +96,8 @@ class MyBoid(ContinuousSpaceAgent):
             np.asarray([n.direction for n in neighbors]).sum(axis=0) * self.match_factor
         )
 
-        # Update direction based on the three behaviors
-        self.direction += (cohere_vector + separation_vector + match_vector) / len(
-            neighbors
-        )
+        # Update direction based on behaviors
+        self.direction += (base_vector + cohere_vector + separation_vector + match_vector) / len(neighbors)
 
         # Normalize direction vector
         self.direction /= np.linalg.norm(self.direction)
@@ -93,4 +105,7 @@ class MyBoid(ContinuousSpaceAgent):
         # Move boid
         self.position += self.direction * self.speed
 
-        _mesa_logger.warning(f"Agent {self.uuid} location {self.position}, direction {self.direction}")
+        _mesa_logger.warning(self)
+    
+    def __repr__(self):
+        return f"(agent {self.unique_id} g {self.group} l {self.position} d {self.direction})"
