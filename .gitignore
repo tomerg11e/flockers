@@ -1,0 +1,54 @@
+# Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.pyo
+*.pyc
+*.so
+*.dylib
+
+# Virtual environment
+venv/
+env/
+.venv/
+.env
+
+# Python egg files
+*.egg
+*.egg-info/
+.eggs/
+
+# Distribution/Packaging
+.Python
+build/
+dist/
+*.egg-info/
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+
+# macOS system files
+.DS_Store
+
+# Windows system files
+Thumbs.db
+Desktop.ini
+
+# pytest
+.cache/
+nosetests.xml
+coverage.xml
+*.cover
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Flask
+instance/
+*.db
+*.sqlite3
