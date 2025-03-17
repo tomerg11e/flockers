@@ -3,7 +3,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath("../../../.."))
 import matplotlib.pyplot as plt
-from boidFlockersModel import BoidFlockers
+from ifaModel import IFAModel
 from mesa.visualization import Slider, SolaraViz, make_space_component
 from mesa.mesa_logging import get_rootlogger
 import logging
@@ -17,10 +17,14 @@ width = 50
 height = 50
 
 def boid_draw(agent, palette="tab10"):
-    neighbors = len(agent.neighbors)
-    cmap = plt.get_cmap(palette)
-    color = cmap(agent.group % cmap.N)
-    return {"color": color, "size": 20}
+    if agent.mission is not None:
+        cmap = plt.get_cmap(palette)
+        color = cmap(agent.group_number % cmap.N)
+        marker = "o"
+    else:
+        color = "black"
+        marker = "x"
+    return {"color": color, "size": 20, "marker": marker}
 
 
 model_params = {
@@ -61,7 +65,7 @@ model_params = {
     ),
 }
 
-model = BoidFlockers(width=width, height=height)
+model = IFAModel(width=width, height=height)
 
 page = SolaraViz(
     model,

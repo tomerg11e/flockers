@@ -4,15 +4,16 @@ This implementation uses numpy arrays to represent vectors for efficient computa
 of flocking behavior.
 """
 from itertools import compress
+from typing import Optional
 import numpy as np
 import uuid
 import random
 from mesa.experimental.continuous_space import ContinuousSpaceAgent
 from mesa.mesa_logging import create_module_logger, method_logger
-
+from mission import Mission
 _mesa_logger = create_module_logger()
 
-class MyBoid(ContinuousSpaceAgent):
+class AirplaneAgent(ContinuousSpaceAgent):
     """A Boid-style flocker agent.
 
     The agent follows three behaviors to flock:
@@ -29,16 +30,16 @@ class MyBoid(ContinuousSpaceAgent):
         self,
         model,
         space,
-        position=(0, 0),
+        position=np.array([ 0, 0]),
         speed=1,
-        direction=(1, 1),
+        direction=np.array([ 1, 1]),
         vision=1,
         separation=1,
         cohere=0.03,
         separate=0.015,
         match=0.05,
         starting_factor=0.01,
-        Maxgroup = 1
+        group = 1
     ):
         """Create a new Boid flocker agent.
 
@@ -53,7 +54,7 @@ class MyBoid(ContinuousSpaceAgent):
             match: Relative importance of matching neighbors' directions (default: 0.05)
         """
         super().__init__(space, model)
-        self.startign_position = position
+        self.base_location = position
         self.position = position
         self.speed = speed
         self.direction = direction
@@ -63,28 +64,25 @@ class MyBoid(ContinuousSpaceAgent):
         self.separate_factor = separate
         self.match_factor = match
         self.starting_factor = starting_factor
-        self.group = random.randint(1, Maxgroup)
+        self.group_number = group
         self.neighbors = []
         self.uuid = uuid.uuid4()
+        self.mission: Optional[Mission] = None
+        self.inAction = True
     
-    @method_logger(__name__)
-    def step(self):
+    def calculate_direction_by_boid_forces(self):
         """Get the Boid's neighbors, compute the new vector, and move accordingly."""
         # calc base vector
-        base_vector = (self.position - self.startign_position) * self.starting_factor
-        base_vector = 0
-
+        base_vector = (self.position - self.base_location) * self.starting_factor
 
         # get only neigbors that are in the same group and not self
         neighbors, distances = self.space.get_agents_in_radius(self.position, radius=self.vision)
-        NeighborInGroupFlag =  np.asarray([agent.group == self.group and agent is not self for agent in neighbors])
+        NeighborInGroupFlag =  np.asarray([agent.group_number == self.group_number and agent is not self for agent in neighbors])
         neighbors = list(compress(neighbors, NeighborInGroupFlag))
         self.neighbors = [n for n in neighbors if n is not self]
         
         if len(neighbors) == 0: # If no neighbors, maintain current direction and return a bit to base
-            self.direction += base_vector
-            self.position += self.direction * self.speed
-            return
+            return base_vector
         
         distances = distances[NeighborInGroupFlag]
         delta = self.space.calculate_difference_vector(self.position, agents=neighbors)
@@ -97,15 +95,34 @@ class MyBoid(ContinuousSpaceAgent):
         )
 
         # Update direction based on behaviors
-        self.direction += (base_vector + cohere_vector + separation_vector + match_vector) / len(neighbors)
+        new_direction = (base_vector + cohere_vector + separation_vector + match_vector) / len(neighbors)
 
-        # Normalize direction vector
-        self.direction /= np.linalg.norm(self.direction)
+        return new_direction
 
+    def calculate_direction_by_mission(self):
+        return None
+    
+    def setMisiion(self, mission):
+        self.mission = mission
+        self.inAction = True
+
+    @method_logger(__name__)
+    def step(self):
+        if self.mission is not None:
+            # get direction by mission logic
+            new_direction = self.calculate_direction_by_mission()
+        else:
+            #get direction by boid logic
+            new_direction = self.calculate_direction_by_boid_forces()
+        
+        # _mesa_logger.warning(new_direction)
+        _mesa_logger.warning(f"{self.mission},{self.direction}, {new_direction}")
+        self.direction = self.direction + new_direction
+        self.direction = self.direction / np.linalg.norm(self.direction)
         # Move boid
         self.position += self.direction * self.speed
 
         _mesa_logger.warning(self)
     
     def __repr__(self):
-        return f"(agent {self.unique_id} g {self.group} l {self.position} d {self.direction})"
+        return f"(agent {self.unique_id} g {self.group_number} l {self.position} d {self.direction})"
