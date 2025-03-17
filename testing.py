@@ -3,7 +3,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath("../../../.."))
 import time
-from ifaModel import IFAModel
+from iafModel import IAFModel
 from mesa.visualization import Slider, SolaraViz, make_space_component
 from mesa.mesa_logging import get_rootlogger
 import logging
@@ -17,7 +17,7 @@ width = 50
 height = 50
 
 
-model = IFAModel(width=width, height=height)
+model = IAFModel(width=width, height=height, population_size=1)
 
 while True:
     model.step()

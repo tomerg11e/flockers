@@ -9,9 +9,9 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath("../../../.."))
-from queue import Queue
 import numpy as np
-from mission import Mission
+from mission import Mission, OptionalMissionClasses
+from typing import List, Optional
 from mesa import Model
 from airplaneAgent import AirplaneAgent
 from mesa.experimental.continuous_space import ContinuousSpace
@@ -20,7 +20,7 @@ from mesa.mesa_logging import create_module_logger, method_logger
 _mesa_logger = create_module_logger()
 
 
-class IFAModel(Model):
+class IAFModel(Model):
     """Flocker model class. Handles agent creation, placement and scheduling."""
 
     def __init__(
@@ -35,7 +35,6 @@ class IFAModel(Model):
         separate=0.075,
         match=0.05,
         seed=None,
-        boidObject=AirplaneAgent,
     ):
         """Create a new Boids Flocking model.
 
@@ -60,16 +59,15 @@ class IFAModel(Model):
             random=self.random,
             n_agents=population_size,
         )
-        self.boidObject = boidObject
 
         # Create and place the Boid agents
-        maxGroups = 3
-        bases_position = self.rng.random(size=(maxGroups, 2)) * self.space.size
-        groups = self.rng.integers(0, maxGroups, size=(population_size,))
+        hangersNum = 3
+        bases_position = self.rng.random(size=(hangersNum, 2)) * self.space.size
+        groups = self.rng.integers(0, hangersNum, size=(population_size,))
         positions = bases_position[groups].squeeze() + self.rng.uniform(-1, 1, size=(population_size, 2))
         # positions = self.rng.random(size=(population_size, 2)) * self.space.size
-        directions = self.rng.uniform(-1, 1, size=(population_size, 2))
-        self.boidObject.create_agents(
+        directions = np.zeros(shape=(population_size, 2))
+        AirplaneAgent.create_agents(
             self,
             population_size,
             self.space,
@@ -83,33 +81,46 @@ class IFAModel(Model):
             separation=separation,
             group = groups
         )
-        self.missions = Queue()
-        self.generate_missions()
+        # HungerAgent.create_agents(
+        #     self,
+        #     hangersNum,
+        #     self.space,
+        #     position=bases_position
+        # )
+        self.missions: List[Mission] = []
+        self.generate_missions(5)
 
 
-    def generate_missions(self, numMissions=5):
+    def generate_missions(self, numMissions=3):
         for _ in range(numMissions):
-            mission_type = self.random.choice(Mission.valid_mission_types)
-            location = self.random.random(2) * self.space.size
-            self.missions.put(Mission(mission_type, location))
+            mission_type = self.random.choice(OptionalMissionClasses)
+            self.missions.append(mission_type(self))
+
+    def mission_finished(self, finished_mission: Mission):
+        for mission in self.missions:
+            if mission.uuid == finished_mission.uuid:
+                mission.stage = Mission.MISSION_COMPLETE
+                _mesa_logger.warning(f"{mission}")
 
     def assign_missions(self):
         for mission in self.missions:
-            if mission.status == "PENDING":
-                agents, distances = self.calculate_distances(mission.location)
-                if agents:
-                    agent = self.random.choice(agents)
+            if mission.stage == Mission.MISSION_PENDING:
+                distances, agents = self.space.calculate_distances(mission.destination)
+                sorted_free_agents = [agents[i] for i in np.argsort(distances) if agents[i].mission is None]
+                if len(sorted_free_agents) != 0:
+                    agent = sorted_free_agents[0]
                     agent.mission = mission
-                    self.missions.remove(mission)
+                    mission.agent = agent
+                    mission.change_stage()
+                    _mesa_logger.warning(f"{mission} assigned to agent {agent.unique_id}")
 
     def step(self):
         """Run one step of the model.
 
         All agents are activated in random order using the AgentSet shuffle_do method.
         """
-        # if self.steps % 5 == 0:
-        #     self.generate_missions()
-        # self.assign_missions()
+        if self.steps % 100 == 0:
+            self.generate_missions()
+        self.assign_missions()
         _mesa_logger.warning(f"Running step {self.steps}")
         self.agents.shuffle_do("step")
-        self.update_average_heading()

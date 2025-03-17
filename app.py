@@ -1,9 +1,9 @@
 import os
 import sys
-
+import numpy as np
 sys.path.insert(0, os.path.abspath("../../../.."))
 import matplotlib.pyplot as plt
-from ifaModel import IFAModel
+from iafModel import IAFModel
 from mesa.visualization import Slider, SolaraViz, make_space_component
 from mesa.mesa_logging import get_rootlogger
 import logging
@@ -16,15 +16,16 @@ logger.addHandler(file_handler)
 width = 50
 height = 50
 
-def boid_draw(agent, palette="tab10"):
-    if agent.mission is not None:
-        cmap = plt.get_cmap(palette)
-        color = cmap(agent.group_number % cmap.N)
-        marker = "o"
-    else:
-        color = "black"
-        marker = "x"
-    return {"color": color, "size": 20, "marker": marker}
+def airplane_draw(agent, palette="tab10"):
+    # if agent.mission is not None:
+    #     cmap = plt.get_cmap(palette)
+    #     color = cmap(agent.group_number % cmap.N)
+    # else:
+    #     color = (np.float64(0), np.float64(0), np.float64(0))
+    cmap = plt.get_cmap(palette)
+    color = cmap(agent.group_number % cmap.N)
+    marker = "o"
+    return {"color": color, "size": 20}
 
 
 model_params = {
@@ -35,16 +36,16 @@ model_params = {
     },
     "population_size": Slider(
         label="Number of boids",
-        value=10,
-        min=10,
-        max=200,
-        step=10,
+        value=5,
+        min=1,
+        max=20,
+        step=1,
     ),
     "width": width,
     "height": height,
     "speed": Slider(
         label="Speed of Boids",
-        value=5,
+        value=1,
         min=1,
         max=20,
         step=1,
@@ -65,12 +66,12 @@ model_params = {
     ),
 }
 
-model = IFAModel(width=width, height=height)
+model = IAFModel(width=width, height=height)
 
 page = SolaraViz(
     model,
-    components=[make_space_component(agent_portrayal=boid_draw, backend="matplotlib")],
+    components=[make_space_component(agent_portrayal=airplane_draw, backend="matplotlib")],
     model_params=model_params,
-    name="Boid Flocking Model",
+    name="Israeli Air Force",
 )
 page  # noqa

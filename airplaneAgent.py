@@ -66,7 +66,6 @@ class AirplaneAgent(ContinuousSpaceAgent):
         self.starting_factor = starting_factor
         self.group_number = group
         self.neighbors = []
-        self.uuid = uuid.uuid4()
         self.mission: Optional[Mission] = None
         self.inAction = True
     
@@ -100,11 +99,8 @@ class AirplaneAgent(ContinuousSpaceAgent):
         return new_direction
 
     def calculate_direction_by_mission(self):
-        return None
-    
-    def setMisiion(self, mission):
-        self.mission = mission
-        self.inAction = True
+        direction_to_mission = (self.mission.destination - self.position)
+        return direction_to_mission
 
     @method_logger(__name__)
     def step(self):
@@ -114,15 +110,27 @@ class AirplaneAgent(ContinuousSpaceAgent):
         else:
             #get direction by boid logic
             new_direction = self.calculate_direction_by_boid_forces()
+            new_direction = -self.direction
         
         # _mesa_logger.warning(new_direction)
-        _mesa_logger.warning(f"{self.mission},{self.direction}, {new_direction}")
         self.direction = self.direction + new_direction
-        self.direction = self.direction / np.linalg.norm(self.direction)
+        direction_norm = np.linalg.norm(self.direction)
+        if direction_norm>1:
+            self.direction = self.direction / np.linalg.norm(self.direction)
         # Move boid
         self.position += self.direction * self.speed
 
         _mesa_logger.warning(self)
+
+        self.check_mission()
     
+    def check_mission(self):
+        if self.mission is not None:
+            mission = self.mission
+            distance_to_destination = np.linalg.norm(self.position - self.mission.destination)
+            if mission.mission_type == "ATTACK":
+                    if distance_to_destination < 1:
+                        self.mission.change_stage()
+
     def __repr__(self):
-        return f"(agent {self.unique_id} g {self.group_number} l {self.position} d {self.direction})"
+        return f"(Agent:{self.unique_id} l {self.position} {self.mission})"
