@@ -7,6 +7,7 @@ from iafModel import IAFModel
 from mesa.visualization import Slider, SolaraViz, make_space_component
 from mesa.mesa_logging import get_rootlogger
 import logging
+from matplotlib.colors import to_hex
 logger = get_rootlogger()
 log_file = "agent_log.txt"  # Specify your log file name
 file_handler = logging.FileHandler(log_file, mode='w')  # 'w' mode will overwrite the file each time
@@ -17,15 +18,14 @@ width = 50
 height = 50
 
 def airplane_draw(agent, palette="tab10"):
-    # if agent.mission is not None:
-    #     cmap = plt.get_cmap(palette)
-    #     color = cmap(agent.group_number % cmap.N)
-    # else:
-    #     color = (np.float64(0), np.float64(0), np.float64(0))
-    cmap = plt.get_cmap(palette)
-    color = cmap(agent.group_number % cmap.N)
-    marker = "o"
-    return {"color": color, "size": 20}
+    if agent.mission is not None:
+        cmap = plt.get_cmap(palette)
+        color = to_hex(cmap(agent.group_number % cmap.N))
+        marker = "o"
+    else:
+        color = "#000000"
+        marker = "X"
+    return {"color": color, "size": 20, "marker": marker}
 
 
 model_params = {
@@ -36,7 +36,7 @@ model_params = {
     },
     "population_size": Slider(
         label="Number of boids",
-        value=5,
+        value=10,
         min=1,
         max=20,
         step=1,

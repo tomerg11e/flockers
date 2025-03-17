@@ -88,7 +88,7 @@ class IAFModel(Model):
         #     position=bases_position
         # )
         self.missions: List[Mission] = []
-        self.generate_missions(5)
+        self.generate_missions(population_size-1)
 
 
     def generate_missions(self, numMissions=3):
@@ -119,8 +119,8 @@ class IAFModel(Model):
 
         All agents are activated in random order using the AgentSet shuffle_do method.
         """
-        if self.steps % 100 == 0:
-            self.generate_missions()
+        if self.steps % 80 == 0:
+            self.generate_missions(self.population_size)
         self.assign_missions()
         _mesa_logger.warning(f"Running step {self.steps}")
         self.agents.shuffle_do("step")
