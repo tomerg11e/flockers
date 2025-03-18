@@ -29,7 +29,7 @@ class BaseAgent(ContinuousSpaceAgent):
         """
         super().__init__(space, model)
         self.position = position
-        self.group_number = group
+        self.base_id = group
 
     def step(self):
         pass

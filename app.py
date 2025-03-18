@@ -27,16 +27,17 @@ def agent_draw(agent, palette="tab10"):
     if isinstance(agent, AirplaneAgent):
         if agent.mission is not None:
             cmap = plt.get_cmap(palette)
-            plot_kwargs["color"] = to_hex(cmap(agent.group_number % cmap.N))
+            plot_kwargs["color"] = to_hex(cmap(agent.base_id % cmap.N))
             plot_kwargs["marker"] = "o"
         else:
             plot_kwargs["color"] = "#000000"
             plot_kwargs["marker"] = "X"
     elif isinstance(agent,BaseAgent):
         cmap = plt.get_cmap(palette)
-        plot_kwargs["color"] = to_hex(cmap(agent.group_number % cmap.N))
+        plot_kwargs["color"] = to_hex(cmap(agent.base_id % cmap.N))
         plot_kwargs["marker"] = "s"
         plot_kwargs["size"] = 50
+        plot_kwargs["zorder"] = 0.5
     return plot_kwargs
 
 model_params = {

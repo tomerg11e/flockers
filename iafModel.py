@@ -36,7 +36,8 @@ class IAFModel(Model):
         separate=0.075, #boid physics
         match=0.05,     #boid physics
         seed=42,
-        generateMissionInterval=80
+        generateMissionInterval=80,
+        basesNum = 3
     ):
         """Create a new IAF model.
 
@@ -63,10 +64,10 @@ class IAFModel(Model):
         )
 
         # Create and place the Boid agents
-        hangersNum = 3
-        bases_position = self.rng.random(size=(hangersNum, 2)) * self.space.size
-        groups = self.rng.integers(0, hangersNum, size=(population_size,))
-        positions = bases_position[groups].squeeze() # + self.rng.uniform(-1, 1, size=(population_size, 2))
+        self.basesNum = basesNum
+        self.bases_position = self.rng.random(size=(basesNum, 2)) * self.space.size
+        groups = self.rng.integers(0, basesNum, size=(population_size,))
+        positions = self.bases_position[groups].squeeze() # + self.rng.uniform(-1, 1, size=(population_size, 2))
         directions = np.zeros(shape=(population_size, 2))
         AirplaneAgent.create_agents(
             self,
@@ -84,10 +85,10 @@ class IAFModel(Model):
         )
         BaseAgent.create_agents(
             self,
-            hangersNum,
+            basesNum,
             self.space,
-            position=bases_position,
-            group = np.arange(hangersNum)
+            position=self.bases_position,
+            group = np.arange(basesNum)
         )
         self.generateMissionInterval = generateMissionInterval
         self.missions: List[Mission] = []

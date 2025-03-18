@@ -64,7 +64,7 @@ class AirplaneAgent(ContinuousSpaceAgent):
         self.separate_factor = separate
         self.match_factor = match
         self.starting_factor = starting_factor
-        self.group_number = group
+        self.base_id = group
         self.neighbors = []
         self.mission: Optional[Mission] = None
         self.inAction = True
@@ -76,7 +76,7 @@ class AirplaneAgent(ContinuousSpaceAgent):
 
         # get only neigbors that are in the same group and not self
         neighbors, distances = self.space.get_agents_in_radius(self.position, radius=self.vision)
-        NeighborInGroupFlag =  np.asarray([agent.group_number == self.group_number and agent is not self and isinstance(agent, AirplaneAgent) for agent in neighbors])
+        NeighborInGroupFlag =  np.asarray([agent.base_id == self.base_id and agent is not self and isinstance(agent, AirplaneAgent) for agent in neighbors])
         neighbors = list(compress(neighbors, NeighborInGroupFlag))
         self.neighbors = [n for n in neighbors if n is not self]
         
@@ -124,13 +124,14 @@ class AirplaneAgent(ContinuousSpaceAgent):
 
         self.check_mission()
     
+    def change_base(self, base_id, base_location):
+        self.base_id = base_id
+        self.base_location = base_location
+
     def check_mission(self):
         if self.mission is not None:
-            mission = self.mission
             distance_to_destination = np.linalg.norm(self.position - self.mission.destination)
-            if mission.mission_type == "ATTACK":
-                    if distance_to_destination < 0.5:
-                        self.mission.change_stage()
+            self.mission.check_stage(distance_to_destination)
 
     def __repr__(self):
         return f"(Agent:{self.unique_id} l {self.position} {self.mission})"
