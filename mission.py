@@ -2,6 +2,13 @@ import numpy as np
 import uuid
 from typing import List, Optional
 class Mission:
+    """
+    A mission is a task that an agent complete. 
+    It can be of different types, such as ATTACK, SWITCH_BASE, Take_To_BASE, RESCUE.
+
+    the mission has some status and some destination which can change.
+    each mission starts as pending until assigned to an agent.
+    """
 
     valid_mission_types = ["ATTACK", "SWITCH_BASE", "Take_To_BASE", "RESCUE"]
     MISSION_COMPLETE = "COMPLETED"
@@ -27,6 +34,10 @@ class Mission:
         raise NotImplementedError("Subclasses must implement this method.")
     
     def check_stage(self, distance_to_destination):
+        """
+        Check if the agent is close enough to the destination to change the stage.
+        note: we use a radius because not always the agent will be exactly at the destination.
+        """
         if distance_to_destination < self.detection_radius:
             self.change_stage()
     

@@ -1,10 +1,3 @@
-"""
-Boids Flocking Model
-===================
-A Mesa implementation of Craig Reynolds's Boids flocker model.
-Uses numpy arrays to represent vectors.
-"""
-
 import os
 import sys
 
@@ -22,7 +15,12 @@ _mesa_logger = create_module_logger()
 
 
 class IAFModel(Model):
-    """Israeli Air Force model class. Handles agent creation, placement and missions."""
+    """
+    This Python module defines an agent-based simulation of the Israeli Air Force (IAF) 
+    using the Mesa framework. 
+    Each agent represents an airplane that can be assigned to missions, or a base. 
+    The simulation includes airbases, mission generation, and agent movement within a continuous space.
+    """
 
     def __init__(
         self,
@@ -30,11 +28,11 @@ class IAFModel(Model):
         width=50,
         height=50,
         speed=1,
-        vision=10,      #boid physics
-        separation=2,   #boid physics
-        cohere=0.03,    #boid physics
-        separate=0.075, #boid physics
-        match=0.05,     #boid physics
+        vision=10,      #boid physics - not used
+        separation=2,   #boid physics - not used
+        cohere=0.03,    #boid physics - not used
+        separate=0.075, #boid physics - not used
+        match=0.05,     #boid physics - not used
         seed=42,
         generateMissionInterval=80,
         basesNum = 3
@@ -42,16 +40,14 @@ class IAFModel(Model):
         """Create a new IAF model.
 
         Args:
-            population_size: Number of Agents in the simulation (default: 100)
-            width: Width of the space (default: 100)
-            height: Height of the space (default: 100)
-            speed: How fast the Agents move (default: 1)
-            vision: How far each Boid can see (default: 10)
-            separation: Minimum distance between Boids (default: 2)
-            cohere: Weight of cohesion behavior (default: 0.03)
-            separate: Weight of separation behavior (default: 0.015)
-            match: Weight of alignment behavior (default: 0.05)
-            seed: Random seed for reproducibility (default: None)
+            population_size (int): Number of airplane agents.
+            width, height (int): Dimensions of the simulation space.
+            speed (float): Movement speed of agents.
+            seed (int, optional): Random seed for reproducibility.
+            generateMissionInterval (int) : Interval (in steps) at which new missions are generated.
+            basesNum (int) : Number of airbases in the simulation.
+            bases_position (ndarray) : Positions of the airbases.
+            missions (List[Mission]) : Active missions in the simulation.
         """
         super().__init__(seed=seed)
         self.population_size = population_size
@@ -63,11 +59,11 @@ class IAFModel(Model):
             n_agents=population_size,
         )
 
-        # Create and place the Boid agents
+        # Create airbases and airplanes
         self.basesNum = basesNum
         self.bases_position = self.rng.random(size=(basesNum, 2)) * self.space.size
         groups = self.rng.integers(0, basesNum, size=(population_size,))
-        positions = self.bases_position[groups].squeeze() # + self.rng.uniform(-1, 1, size=(population_size, 2))
+        positions = self.bases_position[groups].squeeze()
         directions = np.zeros(shape=(population_size, 2))
         AirplaneAgent.create_agents(
             self,
@@ -90,12 +86,17 @@ class IAFModel(Model):
             position=self.bases_position,
             group = np.arange(basesNum)
         )
+        #mission handling and initial generation
         self.generateMissionInterval = generateMissionInterval
         self.missions: List[Mission] = []
         self.generate_missions(population_size-1)
 
 
     def generate_missions(self, numMissions=3):
+        """
+        Generates a specified number of missions and adds them to the mission list.
+        the generated mission types are taken from the OptionalMissionClasses list in the mission.py file.
+        """
         for _ in range(numMissions):
             mission_type = self.random.choice(OptionalMissionClasses)
             self.missions.append(mission_type(self))
@@ -107,6 +108,10 @@ class IAFModel(Model):
                 _mesa_logger.warning(f"{mission}")
 
     def assign_missions(self):
+        """
+        Assigns missions to free agents.
+        right now this is done by assigning the closest free agent to the mission.
+        """
         for mission in self.missions:
             if mission.stage == Mission.MISSION_PENDING:
                 distances, agents = self.space.calculate_distances(mission.destination)
@@ -119,7 +124,8 @@ class IAFModel(Model):
                     _mesa_logger.warning(f"{mission} assigned to agent {agent.unique_id}")
 
     def step(self):
-        """Run one step of the model.
+        """
+        Run one step of the model.
 
         All agents are activated in random order using the AgentSet shuffle_do method.
         """
@@ -128,3 +134,13 @@ class IAFModel(Model):
         self.assign_missions()
         _mesa_logger.warning(f"Running step {self.steps}")
         self.agents.shuffle_do("step")
+    
+    def getFullStatus(self):
+        """
+        Returns the status of all agents in the model.
+        """
+        status = []
+        for agent in self.agents:
+            status.append(agent.__repr__())
+        status = "\n".join(status)
+        return status

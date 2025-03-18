@@ -1,17 +1,10 @@
-"""A Boid (bird-oid) agent for implementing Craig Reynolds's Boids flocking model.
-
-This implementation uses numpy arrays to represent vectors for efficient computation
-of flocking behavior.
-"""
 from itertools import compress
 from typing import Optional
 import numpy as np
-import uuid
-import random
 from mesa.experimental.continuous_space import ContinuousSpaceAgent
 
 class BaseAgent(ContinuousSpaceAgent):
-    """A static agent repressenting air force base.
+    """A static agent repressenting an air force base.
     """
     def __init__(
         self,
