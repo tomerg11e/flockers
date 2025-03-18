@@ -17,7 +17,7 @@ width = 50
 height = 50
 
 
-model = IAFModel(width=width, height=height, population_size=1)
+model = IAFModel(width=width, height=height, population_size=10)
 
 while True:
     model.step()

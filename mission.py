@@ -3,7 +3,7 @@ import uuid
 from typing import List, Optional
 class Mission:
 
-    valid_mission_types = ["ATTACK", "SWITCH_BASE"]
+    valid_mission_types = ["ATTACK", "SWITCH_BASE", "Take_To_BASE", "RESCUE"]
     MISSION_COMPLETE = "COMPLETED"
     MISSION_PENDING = "PENDING"
     def __init__(self, model, mission_type: str, destination: np.ndarray, mission_stages: List[str], detection_radius: float = 0.5):
@@ -11,7 +11,7 @@ class Mission:
             raise ValueError(f"Invalid mission type. Choose from: {Mission.valid_mission_types}")
         
         if not (isinstance(destination, np.ndarray) and destination.shape == (2,)):
-            raise ValueError("Location must be a NumPy ndarray of shape (2,).")
+            raise ValueError("destination must be a NumPy ndarray of shape (2,).")
         
         if not isinstance(mission_stages, List):
             raise ValueError("Stages must be a list.")
@@ -33,49 +33,78 @@ class Mission:
     def __repr__(self):
         return f"Mission(type={self.mission_type}, mission_location={self.destination}, stage={self.stage})"
 
-class AttackMission(Mission):
-    ATTACK_STAGES = ["TO_TARGET", "TO_BASE"]
+class BaseMission(Mission):
+    """
+    BaseMission is a mission that completed by going to a base
+    """
 
-    def __init__(self, model):
-        destination = model.rng.uniform(0, 1, size=(2,)) * model.space.size
-        super().__init__(model, "ATTACK",destination, AttackMission.ATTACK_STAGES)
-        self.attack_location = destination
-        self.agent = None
-    
-    def change_stage(self):
-        if self.stage == Mission.MISSION_PENDING:
-            self.stage = AttackMission.ATTACK_STAGES[0]
-            self.destination = self.attack_location
-            return
-        if self.stage == AttackMission.ATTACK_STAGES[0]:
-            self.stage = AttackMission.ATTACK_STAGES[1]
-            self.destination = self.agent.base_location
-            return
-        if self.stage == AttackMission.ATTACK_STAGES[1]:
-            self.stage = Mission.MISSION_COMPLETE
-            self.model.mission_finished(self)
-            self.agent.mission = None
-            return
+    BASE_STAGES = ["TO_BASE"]
 
-class SwitchBaseMission(Mission):
-
-    SWITCH_BASE_STAGES = ["TO_BASE"]
-
-    def __init__(self, model):
-        self.base_id = model.rng.integers(0, model.basesNum)
+    def __init__(self, model, mission_type: str, base_id: Optional[int] = None):
+        if base_id is None:
+            base_id = model.rng.integers(0, model.basesNum)
+        self.base_id = base_id
         destination = model.bases_position[self.base_id]
-        super().__init__(model, "SWITCH_BASE", destination, SwitchBaseMission.SWITCH_BASE_STAGES)
+        super().__init__(model, mission_type, destination, BaseMission.BASE_STAGES)
         self.agent = None
     
     def change_stage(self):
         if self.stage == Mission.MISSION_PENDING:
-            self.stage = SwitchBaseMission.SWITCH_BASE_STAGES[0]
+            self.stage = BaseMission.BASE_STAGES[0]
             return
-        if self.stage == SwitchBaseMission.SWITCH_BASE_STAGES[0]:
+        if self.stage == BaseMission.BASE_STAGES[0]:
             self.stage = Mission.MISSION_COMPLETE
             self.agent.change_base(self.base_id ,self.destination)
             self.model.mission_finished(self)
             self.agent.mission = None
             return
 
-OptionalMissionClasses = [AttackMission, SwitchBaseMission]
+class BoomerangMission(Mission):
+    """
+    A mission that consist of going to a location and back to base
+    """
+    BOOMERANG_STAGES = ["TO_TARGET", "TO_BASE"]
+
+    def __init__(self, model, mission_type: str, destination: Optional[np.ndarray] = None):
+        if destination is None:
+            destination = model.rng.uniform(0, 1, size=(2,)) * model.space.size
+        super().__init__(model, mission_type, destination, BoomerangMission.BOOMERANG_STAGES)
+        self.target_location = destination
+        self.agent = None
+    
+    def change_stage(self):
+        if self.stage == Mission.MISSION_PENDING:
+            self.stage = BoomerangMission.BOOMERANG_STAGES[0]
+            self.destination = self.target_location
+            return
+        if self.stage == BoomerangMission.BOOMERANG_STAGES[0]:
+            self.stage = BoomerangMission.BOOMERANG_STAGES[1]
+            self.destination = self.agent.base_location
+            return
+        if self.stage == BoomerangMission.BOOMERANG_STAGES[1]:
+            self.stage = Mission.MISSION_COMPLETE
+            self.model.mission_finished(self)
+            self.agent.mission = None
+            return
+
+class AttackMission(BoomerangMission):
+
+    def __init__(self, model):
+        super().__init__(model, "ATTACK")
+
+class RescueMission(BoomerangMission):
+
+    def __init__(self, model):
+        super().__init__(model, "RESCUE")
+
+class SwitchBaseMission(BaseMission):
+
+    def __init__(self, model):
+        super().__init__(model, "SWITCH_BASE")
+
+class TakeToBaseMission(BaseMission):
+
+    def __init__(self, model):
+        super().__init__(model, "Take_To_BASE")
+
+OptionalMissionClasses = [AttackMission, SwitchBaseMission, TakeToBaseMission, RescueMission]
