@@ -4,6 +4,8 @@ import numpy as np
 sys.path.insert(0, os.path.abspath("../../../.."))
 import matplotlib.pyplot as plt
 from iafModel import IAFModel
+from airplaneAgent import AirplaneAgent
+from baseAgent import BaseAgent
 from mesa.visualization import Slider, SolaraViz, make_space_component
 from mesa.mesa_logging import get_rootlogger
 import logging
@@ -17,52 +19,42 @@ logger.addHandler(file_handler)
 width = 50
 height = 50
 
-def airplane_draw(agent, palette="tab10"):
-    if agent.mission is not None:
+def agent_draw(agent, palette="tab10"):
+    plot_kwargs = {
+        "size": 20,
+        "marker": ">",
+    }
+    if isinstance(agent, AirplaneAgent):
+        if agent.mission is not None:
+            cmap = plt.get_cmap(palette)
+            plot_kwargs["color"] = to_hex(cmap(agent.group_number % cmap.N))
+            plot_kwargs["marker"] = "o"
+        else:
+            plot_kwargs["color"] = "#000000"
+            plot_kwargs["marker"] = "X"
+    elif isinstance(agent,BaseAgent):
         cmap = plt.get_cmap(palette)
-        color = to_hex(cmap(agent.group_number % cmap.N))
-        marker = "o"
-    else:
-        color = "#000000"
-        marker = "X"
-    return {"color": color, "size": 20, "marker": marker}
-
+        plot_kwargs["color"] = to_hex(cmap(agent.group_number % cmap.N))
+        plot_kwargs["marker"] = "s"
+        plot_kwargs["size"] = 50
+    return plot_kwargs
 
 model_params = {
-    "seed": {
-        "type": "InputText",
-        "value": 42,
-        "label": "Random Seed",
-    },
-    "population_size": Slider(
-        label="Number of boids",
-        value=10,
-        min=1,
-        max=20,
-        step=1,
-    ),
     "width": width,
     "height": height,
     "speed": Slider(
-        label="Speed of Boids",
+        label="Speed of planes",
         value=1,
         min=1,
         max=20,
         step=1,
     ),
-    "vision": Slider(
-        label="Vision of Bird (radius)",
-        value=10,
-        min=1,
-        max=50,
-        step=1,
-    ),
-    "separation": Slider(
-        label="Minimum Separation",
-        value=2,
-        min=1,
-        max=20,
-        step=1,
+    "generateMissionInterval": Slider(
+        label="generate mission every X ticks",
+        value=80,
+        min=50,
+        max=200,
+        step=10,
     ),
 }
 
@@ -70,7 +62,7 @@ model = IAFModel(width=width, height=height)
 
 page = SolaraViz(
     model,
-    components=[make_space_component(agent_portrayal=airplane_draw, backend="matplotlib")],
+    components=[make_space_component(agent_portrayal=agent_draw, backend="matplotlib")],
     model_params=model_params,
     name="Israeli Air Force",
 )

@@ -76,7 +76,7 @@ class AirplaneAgent(ContinuousSpaceAgent):
 
         # get only neigbors that are in the same group and not self
         neighbors, distances = self.space.get_agents_in_radius(self.position, radius=self.vision)
-        NeighborInGroupFlag =  np.asarray([agent.group_number == self.group_number and agent is not self for agent in neighbors])
+        NeighborInGroupFlag =  np.asarray([agent.group_number == self.group_number and agent is not self and isinstance(agent, AirplaneAgent) for agent in neighbors])
         neighbors = list(compress(neighbors, NeighborInGroupFlag))
         self.neighbors = [n for n in neighbors if n is not self]
         
@@ -129,7 +129,7 @@ class AirplaneAgent(ContinuousSpaceAgent):
             mission = self.mission
             distance_to_destination = np.linalg.norm(self.position - self.mission.destination)
             if mission.mission_type == "ATTACK":
-                    if distance_to_destination < 1:
+                    if distance_to_destination < 0.5:
                         self.mission.change_stage()
 
     def __repr__(self):

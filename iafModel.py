@@ -14,6 +14,7 @@ from mission import Mission, OptionalMissionClasses
 from typing import List, Optional
 from mesa import Model
 from airplaneAgent import AirplaneAgent
+from baseAgent import BaseAgent
 from mesa.experimental.continuous_space import ContinuousSpace
 from mesa.mesa_logging import create_module_logger, method_logger
 
@@ -21,7 +22,7 @@ _mesa_logger = create_module_logger()
 
 
 class IAFModel(Model):
-    """Flocker model class. Handles agent creation, placement and scheduling."""
+    """Israeli Air Force model class. Handles agent creation, placement and missions."""
 
     def __init__(
         self,
@@ -29,20 +30,21 @@ class IAFModel(Model):
         width=50,
         height=50,
         speed=1,
-        vision=10,
-        separation=2,
-        cohere=0.03,
-        separate=0.075,
-        match=0.05,
-        seed=None,
+        vision=10,      #boid physics
+        separation=2,   #boid physics
+        cohere=0.03,    #boid physics
+        separate=0.075, #boid physics
+        match=0.05,     #boid physics
+        seed=42,
+        generateMissionInterval=80
     ):
-        """Create a new Boids Flocking model.
+        """Create a new IAF model.
 
         Args:
-            population_size: Number of Boids in the simulation (default: 100)
+            population_size: Number of Agents in the simulation (default: 100)
             width: Width of the space (default: 100)
             height: Height of the space (default: 100)
-            speed: How fast the Boids move (default: 1)
+            speed: How fast the Agents move (default: 1)
             vision: How far each Boid can see (default: 10)
             separation: Minimum distance between Boids (default: 2)
             cohere: Weight of cohesion behavior (default: 0.03)
@@ -51,7 +53,7 @@ class IAFModel(Model):
             seed: Random seed for reproducibility (default: None)
         """
         super().__init__(seed=seed)
-
+        self.population_size = population_size
         # Set up the space
         self.space = ContinuousSpace(
             [[0, width], [0, height]],
@@ -64,8 +66,7 @@ class IAFModel(Model):
         hangersNum = 3
         bases_position = self.rng.random(size=(hangersNum, 2)) * self.space.size
         groups = self.rng.integers(0, hangersNum, size=(population_size,))
-        positions = bases_position[groups].squeeze() + self.rng.uniform(-1, 1, size=(population_size, 2))
-        # positions = self.rng.random(size=(population_size, 2)) * self.space.size
+        positions = bases_position[groups].squeeze() # + self.rng.uniform(-1, 1, size=(population_size, 2))
         directions = np.zeros(shape=(population_size, 2))
         AirplaneAgent.create_agents(
             self,
@@ -81,12 +82,14 @@ class IAFModel(Model):
             separation=separation,
             group = groups
         )
-        # HungerAgent.create_agents(
-        #     self,
-        #     hangersNum,
-        #     self.space,
-        #     position=bases_position
-        # )
+        BaseAgent.create_agents(
+            self,
+            hangersNum,
+            self.space,
+            position=bases_position,
+            group = np.arange(hangersNum)
+        )
+        self.generateMissionInterval = generateMissionInterval
         self.missions: List[Mission] = []
         self.generate_missions(population_size-1)
 
@@ -106,7 +109,7 @@ class IAFModel(Model):
         for mission in self.missions:
             if mission.stage == Mission.MISSION_PENDING:
                 distances, agents = self.space.calculate_distances(mission.destination)
-                sorted_free_agents = [agents[i] for i in np.argsort(distances) if agents[i].mission is None]
+                sorted_free_agents = [agents[i] for i in np.argsort(distances) if isinstance(agents[i], AirplaneAgent) and agents[i].mission is None]
                 if len(sorted_free_agents) != 0:
                     agent = sorted_free_agents[0]
                     agent.mission = mission
@@ -119,7 +122,7 @@ class IAFModel(Model):
 
         All agents are activated in random order using the AgentSet shuffle_do method.
         """
-        if self.steps % 80 == 0:
+        if self.steps % self.generateMissionInterval == 0:
             self.generate_missions(self.population_size)
         self.assign_missions()
         _mesa_logger.warning(f"Running step {self.steps}")
